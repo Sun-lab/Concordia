@@ -19,3 +19,23 @@ Processed files for the lung cancer dataset (originally version of data is from 
 ```
 data/Cords_data
 ```
+
+## Step 2. Generate graphs
+
+To generate graphs for a new dataset, add a new named configuration block in the `data_features` class in `data_utilities.py` by adding an `if data_name == "<your_dataset_name>":` block and specifying the following fields:
+
+1. Paths:
+   - `raw_dir`: path to the folder containing the per-image/tissue .csv files prepared in Step 1
+   - `dataset_root`: path to the folder where the generated graph objects will be saved
+
+2. Cell type mappings:
+   - `cell_type_mapping`: a dictionary mapping each fine-scale cell type name (string) to a **unique integer between 0 and number of cell types - 1**
+   - `group_ct_mapping`: a dictionary mapping each coarse-scale cell type name (string) to a set of fine-scale cell type names that belong to that group
+
+3. Region list:
+   - `train_images`: a list of `region_ID` strings specifying which images/tissues to include; typically loaded from `region_list.csv` prepared in Step 1
+
+4. Graph construction parameters:
+   - `dist_cutoff`: numerical distance cutoff for adding edges in the basic graph (e.g., `16`)
+   - `path_purity_cutoff`: a value between 0 and 1; the edges between pairs of cells having shortest paths with purity below this threshold are excluded as candidate edges in the second step extension (e.g., `0.90`)
+   - `n_cells_threshold`: integer minimum number of cells a cluster must contain in a given image to be included when computing embedding and physical distances between clusters per image (e.g., `30`)

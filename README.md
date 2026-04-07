@@ -35,7 +35,20 @@ To generate graphs for a new dataset, add a new named configuration block in the
 3. Region list:
    - `train_images`: a list of `region_ID` strings specifying which images/tissues to include; typically loaded from `region_list.csv` prepared in Step 1
 
-4. Graph construction parameters:
-   - `dist_cutoff`: numerical distance cutoff for adding edges in the basic graph (e.g., `16`)
-   - `path_purity_cutoff`: a value between 0 and 1; the edges between pairs of cells having shortest paths with purity below this threshold are excluded as candidate edges in the second step extension (e.g., `0.90`)
-   - `n_cells_threshold`: integer minimum number of cells a cluster must contain in a given image to be included when computing embedding and physical distances between clusters per image (e.g., `30`)
+4. Other parameters:
+   - `dist_cutoff`: numerical distance cutoff for adding edges in the basic graph, changes according to different datasets (e.g., `16`)
+   - `path_purity_cutoff`: a value between 0 and 1; the edges between pairs of cells having shortest paths with purity below this threshold are excluded as candidate edges in the second step extension, default `0.90`
+   - `n_cells_threshold`: integer minimum number of cells a cluster must contain in a given image to be included when computing embedding and physical distances between clusters per image, changes according to different datasets (e.g., `30`)
+
+For computational time consideration, it is recommended to generate graph objects for each image in a dataset separately and run in parallel, and move individual files together to one folder. 
+
+The step of generating graph objects for each image one by one, taking Cords et al. 2024 data as an example, can be done by running 
+```
+generate_graphs_per_image.sh
+```
+which calls the file `generate_graphs_per_image.py`.
+
+The moving of the graph objects and other relevant files can be done by:
+```
+reorganize_graph_objects.ipynb
+```

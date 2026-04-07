@@ -97,10 +97,10 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
     NEIGHBOR_EDGE_CUTOFF = data_dicts.dist_cutoff
     PATH_PURITY_CUTOFF = data_dicts.path_purity_cutoff
 
-    data_subfolder = data_dicts.data_subfolder
+    result_subfolder = data_dicts.result_subfolder
 
-    output_dir = "./results/"+data_subfolder
-    model_dir = "./saved_models/"+data_subfolder
+    output_dir = "./results/"+result_subfolder+"/"+graph_type
+    model_dir = "./saved_models/"+result_subfolder+"/"+graph_type
 
     embedding_save_dir = output_dir+"/epoch_"+str(epoch_limit)
 

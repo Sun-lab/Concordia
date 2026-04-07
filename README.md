@@ -63,3 +63,37 @@ Taking Cords et al. 2024 data as an example, the model training and embedding sa
 which calls
 
 [train.py](https://github.com/Sun-lab/Concordia/blob/main/train.py)
+
+## Step4. Obtain domains
+
+### step4.1 Run K-means on embeddings to get a relatively large number of clusters
+
+Taking Cords et al. 2024 data as an example, this step can be done by
+
+[k_means_on_embeddings.sh](https://github.com/Sun-lab/Concordia/blob/main/k_means_on_embeddings.sh)
+
+which calls
+
+[k_means_on_embeddings.py](https://github.com/Sun-lab/Concordia/blob/main/k_means_on_embeddings.py)
+
+### step4.2 Within each image, compute the embedding distance and physical distance between any pair of clusters
+
+Taking Cords et al. 2024 data as an example, this step can be done by
+
+[cluster_dist_in_image.sh](https://github.com/Sun-lab/Concordia/blob/main/cluster_dist_in_image.sh)
+
+which calls
+
+[cluster_dist_in_image.py](https://github.com/Sun-lab/Concordia/blob/main/cluster_dist_in_image.py)
+
+### step4.3 Get final weighted distance matrix, merge clusters into domains
+
+Taking Cords et al. 2024 data as an example, this step can be done by
+
+[merge_clusters_to_domains.sh](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.sh)
+
+which calls
+
+[merge_clusters_to_domains.py](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.py)
+
+The final output file is `domain_annotation_for_cells.csv`, which gives the correspondance between `CELL_ID` and `domain` annotation for all cells from all images in the dataset. 

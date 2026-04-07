@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# the code to train the GNN model using mincut_pool loss
+# train the GNN model using mincut_pool loss
+# save the embeddings right before softmax out
 
 
 import os
@@ -101,8 +102,12 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
     output_dir = "./results/"+data_subfolder
     model_dir = "./saved_models/"+data_subfolder
 
+    embedding_save_dir = output_dir+"/epoch_"+str(epoch_limit)
+
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
+
+    os.makedirs(embedding_save_dir, exist_ok=True)
 
     # Settings
     raw_data_root = data_dicts.raw_dir
@@ -165,7 +170,6 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
 
     train_dataset
 
-
     len(train_dataset.processed_paths)
     max(train_dataset.indices())
 
@@ -173,6 +177,7 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
     assert len(set(train_dataset.region_ids))==len(train_images), "numbers of images do not align"
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    images_loader = DataLoader(train_dataset, batch_size=1, shuffle=False) # for saving the embeddings for each image separately
 
     model = GCN_model(cell_feature, N_CELL_TYPE_GROUPS,
                       gcn_type, n_gcns, s_dim2, mincut_type, skip_type)
@@ -256,8 +261,9 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
         print("Epoch: "+str(epoch))
         print("training loss: mc "+str(train_mc)+ " o "+str(train_o)+ " total loss "+str(train_loss))
 
-        PATH = "_train_model_"+str(epoch)+".pt"
-        torch.save(model.state_dict(), model_dir+"/"+PATH)
+        if epoch == epoch_limit:
+            PATH = "_train_model_"+str(epoch)+".pt"
+            torch.save(model.state_dict(), model_dir+"/"+PATH)
 
     df_train = pd.DataFrame(list(zip(train_mc_list,
                                      train_o_list,
@@ -268,6 +274,38 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
     df_train.to_csv(output_dir+"/train_record.csv",
                         index=False)
 
+    # save the embeddings right before softmax out
+    model.eval()
+    
+    layer_outputs = {}
+
+    def hook(module, input, output):
+        layer_outputs["linear1"] = output.detach()
+
+    handle = model.linear1.register_forward_hook(hook)
+
+    for data in images_loader:
+
+        layer_outputs.clear()
+
+        data = data.to(device)
+        with torch.no_grad():
+            _ = model(data.x,
+                    remove_self_loops(data.edge_index)[0],
+                    data.batch,
+                    data.n_cells)
+
+        # Save the desired layer output for linear1 layer
+        output = layer_outputs["linear1"]
+
+        df = pd.DataFrame(output.detach().cpu().numpy())
+
+        os.makedirs(embedding_save_dir+"/linear1", exist_ok=True)
+
+        output_filename = "linear1_"+data.region_id[0]+".csv"
+        df.to_csv(embedding_save_dir+"/linear1/"+output_filename, index=False)
+
+    handle.remove()
 
 if __name__ == "__main__":
     args = parser.parse_args()

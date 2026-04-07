@@ -54,9 +54,9 @@ The moving of the graph objects and other relevant files can be done by:
 
 [reorganize_graph_objects.ipynb](https://github.com/Sun-lab/Concordia/blob/main/reorganize_graph_objects.ipynb)
 
-## Step3. Train GNN model with sparse_mincut_pool loss
+## Step3. Train GNN model with sparse_mincut_pool loss and save cell embeddings out
 
-Taking Cords et al. 2024 data as an example, the model training can be done by
+Taking Cords et al. 2024 data as an example, the model training and embedding saving can be done by
 
 [train.sh](https://github.com/Sun-lab/Concordia/blob/main/train.sh)
 

@@ -102,6 +102,4 @@ class GCN_model(torch.nn.Module):
 
         if self.mincut_type == "sparse_mincut_pool":
             x_cluster, adj, mc1, o1 = sparse_mincut_pool(out, edge_index, batch, s)
-
-        if self.mincut_type == "sparse_mincut_pool":
             return mc1, o1

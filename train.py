@@ -1,0 +1,275 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# the code to train the GNN model using mincut_pool loss
+
+
+import os
+import sys
+
+import torch
+from torch_geometric.data import Dataset, Data, download_url
+from torch_geometric.loader import DataLoader
+
+import numpy as np
+import pandas as pd
+import json
+import pickle
+import matplotlib
+import matplotlib.path as mplPath
+import matplotlib.pyplot as plt
+import networkx as nx
+import warnings
+
+from torch_geometric.utils import remove_self_loops
+
+from tqdm import tqdm
+
+from scipy.spatial import Delaunay
+from scipy.spatial import distance_matrix
+
+from sklearn import metrics
+
+from collections.abc import Sequence
+from collections import Counter
+from collections import defaultdict
+import copy
+
+import random
+import math
+
+import gc
+
+import argparse
+
+# this line below is needed if want to import function from other python files in local directory
+sys.path.append(os.getcwd())
+
+from data_utilities import data_features
+from models import GCN_model
+
+from data_transformers import add_num_of_cells
+from sparse_mincut_pool import sparse_mincut_pool
+from graph_data_class import CellularGraphDataset
+
+
+parser = argparse.ArgumentParser(description='classification on cords 2024 dataset')
+
+parser.add_argument('--data_name', default="cords_2024", type=str, help='the name of the dataset to use')
+parser.add_argument('--graph_type', default="extended", type=str,
+                                    help='name for the feature and graph combination.',
+                                    choices=['extended', 'basic', 'local'])
+parser.add_argument('--gcn_type', default="gat2", type=str,
+                                   choices=['gcn', 'gat', 'gat2'],
+                                   help='what gcn layer to use')
+parser.add_argument('--skip_type', default="add", type=str,
+                                   choices=['no', 'add', 'concat', 'add2', 'concat2'],
+                                   help='which type of skip connection to use')
+parser.add_argument('--device', default="gpu", type=str, help='whether to use CPU or GPU')
+parser.add_argument('--s_dim2', default=40, type=int, help='number of columns in soft assignment matrix')
+parser.add_argument('--batch_size', default=64, type=int, help='batch size')
+parser.add_argument('--lr', type=float, default=1e-3, help='learning rate, for example, 0.001')
+parser.add_argument('--epoch_limit', type=int, default=1000, help='max number of epoches, for example, 1000')
+parser.add_argument('--degree_limit', type=int, default=20, help='the average degree to achieve for each image in fully extended graph, for example, 20')
+
+
+def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2", skip_type="add", 
+                   device="gpu", s_dim2=40, batch_size=64,
+                   lr=0.001, epoch_limit=1000, degree_limit=20):
+
+    torch.manual_seed(1629)
+    random.seed(1000)
+    np.random.seed(1028)
+
+    input_args = locals()
+    print("input args are", input_args)
+
+    cell_feature = "comp2nd"
+    mincut_type = "sparse_mincut_pool"
+    n_gcns = 2
+
+    # Metadata for the chosen dataset
+    # not split on dataset based on patients into training/validation/test
+    # all images go to training set
+    data_dicts  = data_features(data_name, graph_type)
+    
+    NEIGHBOR_EDGE_CUTOFF = data_dicts.dist_cutoff
+    PATH_PURITY_CUTOFF = data_dicts.path_purity_cutoff
+
+    data_subfolder = data_dicts.data_subfolder
+
+    output_dir = "./results/"+data_subfolder
+    model_dir = "./saved_models/"+data_subfolder
+
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
+
+    # Settings
+    raw_data_root = data_dicts.raw_dir
+    dataset_root = data_dicts.dataset_root
+
+    if device == "cpu":
+        device = torch.device("cpu")
+    else:
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    print(device)
+
+    train_images = data_dicts.train_images
+
+    print("The number of images involved: ")
+    print(len(train_images))
+
+
+    # Define Cellular Graph Dataset
+    dataset_kwargs = {
+        'raw_cell_info_path': raw_data_root,
+        'raw_folder_name': 'graph',
+        'processed_folder_name': data_dicts.processed_folder_name,
+        'node_features': ["cell_type_group", "neighborhood_composition"],
+        'neighbor_edge_cutoff': NEIGHBOR_EDGE_CUTOFF,
+        'degree_limit': degree_limit,
+        'path_purity_cutoff': PATH_PURITY_CUTOFF,
+        'cell_type_mapping': data_dicts.cell_type_mapping,
+        'group_ct_mapping': data_dicts.group_ct_mapping,
+        'operation_type': "load"
+    }
+
+
+    dataset_kwargs.keys()
+
+    dataset_root
+
+    dataset = CellularGraphDataset(dataset_root, **dataset_kwargs)
+
+    N_CELL_TYPE_GROUPS = len(data_dicts.group_ct_mapping)
+
+    # Define Transformers
+    transformers = [
+        add_num_of_cells()
+    ]
+
+    dataset.set_transforms(transformers)
+
+    len(dataset)
+    len(dataset.region_ids)
+    len(dataset.raw_paths)
+
+    dataset
+    dataset.raw_paths[-1]
+
+    # get data objects corresponding to training images
+    region_ids = [dataset.get_full(i).region_id for i in range(dataset.N)]
+
+    train_dataset = dataset.index_select([i for i,x in enumerate(region_ids) if x in train_images])
+
+    train_dataset
+
+
+    len(train_dataset.processed_paths)
+    max(train_dataset.indices())
+
+
+    assert len(set(train_dataset.region_ids))==len(train_images), "numbers of images do not align"
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    model = GCN_model(cell_feature, N_CELL_TYPE_GROUPS,
+                      gcn_type, n_gcns, s_dim2, mincut_type, skip_type)
+    print(model)
+    model.to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+
+    def train(mincut_type):
+        model.zero_grad(set_to_none=True)
+        # model.to(device)
+        model.train()
+
+        for data in train_loader:  # Iterate in batches over the training dataset.
+            # print(data)
+            data = data.to(device)
+            if mincut_type == "sparse_mincut_pool":
+                mc_loss, o1_loss = model(data.x,
+                                         remove_self_loops(data.edge_index)[0],
+                                         data.batch,
+                                         data.n_cells)   # Perform a single forward pass.
+                loss = mc_loss + o1_loss # Compute the loss.
+
+            loss.backward()  # Derive gradients.
+            optimizer.step()  # Update parameters based on gradients.
+            model.zero_grad(set_to_none=True)  # Clear gradients.
+
+
+    def record_loss(loader, mincut_type):
+
+        model.to(device)
+        model.eval()
+
+        mc_loss_list = []
+        o_loss_list = []
+
+        with torch.no_grad():
+            for data in loader:  # Iterate in batches over the training/validation/test dataset.
+
+                data = data.to(device)
+
+                if mincut_type == "sparse_mincut_pool":
+
+                    mc_loss, o_loss = model(data.x,
+                                             remove_self_loops(data.edge_index)[0],
+                                             data.batch,
+                                             data.n_cells)
+
+                    mc_loss_value = mc_loss.to('cpu').item()
+                    o_loss_value = o_loss.to('cpu').item()
+
+                    mc_loss_list += [mc_loss_value]
+                    o_loss_list += [o_loss_value]
+
+
+        mc_ave = sum(mc_loss_list)/len(mc_loss_list)
+        o_ave = sum(o_loss_list)/len(o_loss_list)
+
+        return mc_ave, o_ave
+
+    if device != "cpu":
+        print("before training: ")
+        print(f"gpu used {torch.cuda.max_memory_allocated(device=None)} memory")
+
+
+    train_mc_list = []
+    train_o_list = []
+    train_unsuper_list = []
+
+    for epoch in range(1, epoch_limit+1):
+        train(mincut_type=mincut_type)
+        train_mc, train_o = record_loss(train_loader, mincut_type)
+
+        train_loss = train_mc + train_o
+
+        train_mc_list += [train_mc]
+        train_o_list += [train_o]
+        train_unsuper_list += [train_loss]
+
+        print("Epoch: "+str(epoch))
+        print("training loss: mc "+str(train_mc)+ " o "+str(train_o)+ " total loss "+str(train_loss))
+
+        PATH = "_train_model_"+str(epoch)+".pt"
+        torch.save(model.state_dict(), model_dir+"/"+PATH)
+
+    df_train = pd.DataFrame(list(zip(train_mc_list,
+                                     train_o_list,
+                                     train_unsuper_list)))
+
+    df_train.columns = ["train_mc", "train_o", "train_unsupervised"]
+
+    df_train.to_csv(output_dir+"/train_record.csv",
+                        index=False)
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    print(args)
+    mincutpool_run(**vars(args))

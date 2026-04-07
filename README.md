@@ -43,12 +43,23 @@ To generate graphs for a new dataset, add a new named configuration block in the
 For computational time consideration, it is recommended to generate graph objects for each image in a dataset separately and run in parallel, and move individual files together to one folder. 
 
 The step of generating graph objects for each image one by one, taking Cords et al. 2024 data as an example, can be done by running 
-```
-generate_graphs_per_image.sh
-```
-which calls the file `generate_graphs_per_image.py`.
+
+[generate_graphs_per_image.sh](https://github.com/Sun-lab/Concordia/blob/main/generate_graphs_per_image.sh)
+
+which calls the file 
+
+[generate_graphs_per_image.py](https://github.com/Sun-lab/Concordia/blob/main/generate_graphs_per_image.py)
 
 The moving of the graph objects and other relevant files can be done by:
-```
-reorganize_graph_objects.ipynb
-```
+
+[reorganize_graph_objects.ipynb](https://github.com/Sun-lab/Concordia/blob/main/reorganize_graph_objects.ipynb)
+
+## Step3. Train GNN model with sparse_mincut_pool loss
+
+Taking Cords et al. 2024 data as an example, the model training can be done by
+
+[train.sh](https://github.com/Sun-lab/Concordia/blob/main/train.sh)
+
+which calls
+
+[train.py](https://github.com/Sun-lab/Concordia/blob/main/train.py)

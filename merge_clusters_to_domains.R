@@ -62,7 +62,7 @@ raw_dir = feature_list$raw_dir
 n_cells_threshold = feature_list$n_cells_threshold
 n_images_threshold = feature_list$n_images_threshold
 
-dir = file.path("./results", data_subfolder, graph_type)
+dir = file.path("./results", result_subfolder, graph_type)
 
 # from the file _get_n_cells_in_clusters.R
 get_n_cells_in_clusters(raw_dir, dir, region_ids, n_kmeans_clusters)

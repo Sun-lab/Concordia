@@ -11,7 +11,7 @@ cur_name=${data_name}_${graph_type}
 
 R CMD BATCH --quiet --no-save \
 "--args data_name='${data_name}' graph_type='${graph_type}' \
-n_kmeans_clusters='${n_kmeans_clusters}' n_domain='${n_domain}'" \
+n_kmeans_clusters='${n_kmeans_clusters}' n_domains='${n_domains}'" \
 merge_clusters_to_domains.R \
 merge_clusters_to_domains_Rout/merge_clusters_to_domains_${cur_name}.Rout
 

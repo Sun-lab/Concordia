@@ -10,7 +10,7 @@ data_features <- function(data_name){
     df_images = read.csv(paste0("./data/Cords_data/region_list.csv"),
                          header=TRUE)
     
-    raw_dir = "../data/Cords_data/raw_data"
+    raw_dir = "./data/Cords_data/raw_data"
     result_subfolder = data_name
     
     n_cells_threshold = 30

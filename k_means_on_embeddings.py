@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.cluster import KMeans
-import datetime
+from datetime import datetime
 
 import os
 import sys
@@ -37,6 +37,10 @@ def run_k_means(data_name="cords_d20",
 
     input_args = locals()
     print("input args are", input_args)
+
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Start running K-means on embeddings: ", current_time)
 
     n_kmeans_clusters = int(n_kmeans_clusters)
 
@@ -86,15 +90,15 @@ def run_k_means(data_name="cords_d20",
     X = np.array(layer_chunk)
     X.shape
 
-    current_time = datetime.datetime.now()
+    current_time = datetime.now()
     print(current_time)
     k_means = KMeans(n_clusters=n_kmeans_clusters, random_state=0, n_init="auto").fit(X)
-    current_time = datetime.datetime.now()
+    current_time = datetime.now()
     print(current_time)
 
     print(k_means.inertia_)
 
-    assert len(set(num_id_list)) == len(num_id_list)
+    assert len(set(num_id_list)) == len(num_id_list), "duplicated cell IDs (even if not in the same image) are not allowed"
 
     ### Output the correspondance between CELL_ID and kmeans cluster assignment
 
@@ -121,6 +125,9 @@ def run_k_means(data_name="cords_d20",
     df_kmeans.to_csv(output_dir+"/kmeans_cluster.csv", index=False)
     df_kmeans[:6]
 
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Finish running K-means on embeddings: ", current_time)
 
 if __name__ == "__main__":
     args = parser.parse_args()

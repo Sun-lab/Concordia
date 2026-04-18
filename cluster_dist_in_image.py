@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.spatial import distance_matrix
 
 from sklearn.cluster import KMeans
-import datetime
+from datetime import datetime
 
 import os
 import sys
@@ -29,16 +29,22 @@ parser.add_argument('--data_name', default="cords_2024", type=str, help='the nam
 parser.add_argument('--graph_type', default="extended", type=str,
                                     help='name for the feature and graph combination.',
                                     choices=['extended', 'basic', 'local'])
+parser.add_argument('--region_index', type=int, default=0, 
+                                    help='the index of the region to compute the between-cluster distances for')
 parser.add_argument('--n_kmeans_clusters', default=40, type=int, 
-                                           help='the number of clusters to have from kmeans')     
+                                    help='the number of clusters to have from kmeans')     
 parser.add_argument('--epoch_limit', default=1000, type=int, help='the number of epochs to train the model for, ' \
 'which determines the epoch id of the embeddings to run k-means on')           
 
-def get_dist_in_image(data_name="cords_2024", graph_type="extended", 
+def get_dist_in_image(data_name="cords_2024", graph_type="extended", region_index=0,
                       n_kmeans_clusters=40, epoch_limit=1000):
 
     input_args = locals()
     print("input args are", input_args)
+
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Start computing embedding distance and physical distance based on given image: ", current_time)
 
     epoch_id = epoch_limit
 
@@ -54,78 +60,79 @@ def get_dist_in_image(data_name="cords_2024", graph_type="extended",
     output_dir = "./results/"+result_subfolder+"/"+graph_type
     embedding_dir = output_dir+"/epoch_"+str(epoch_id)
 
+    train_images.sort()
 
-    for image_ind in range(len(train_images)):
 
-        cur_region = train_images[image_ind]
+    cur_region = train_images[region_index]
 
-        df_cur = pd.read_csv(raw_dir+"/"+cur_region+".csv",
+    df_cur = pd.read_csv(raw_dir+"/"+cur_region+".csv",
+                        header=0)
+
+    cur_coords = np.array([[x,y] for x,y in zip(df_cur["X"].tolist(),
+                                                df_cur["Y"].tolist())])
+    cur_coords_mat = distance_matrix(cur_coords, cur_coords, p=2)
+
+    # load the linear1 embedding values for the current region
+    df_embedding = pd.read_csv(embedding_dir+"/linear1/linear1_"+cur_region+".csv",
                             header=0)
 
-        cur_coords = np.array([[x,y] for x,y in zip(df_cur["X"].tolist(),
-                                                    df_cur["Y"].tolist())])
-        cur_coords_mat = distance_matrix(cur_coords, cur_coords, p=2)
+    df_embedding.shape
 
-        # load the linear1 embedding values for the current region
-        df_embedding = pd.read_csv(embedding_dir+"/linear1/linear1_"+cur_region+".csv",
-                                header=0)
+    assert df_cur.shape[0]==df_embedding.shape[0]
 
-        df_embedding.shape
+    np_embed = df_embedding.to_numpy()
 
-        assert df_cur.shape[0]==df_embedding.shape[0]
+    df_cluster = pd.read_csv(output_dir+"/kmeans_cluster.csv", 
+                            header=0)
+    
+    # mapping from CELL_ID to kmeans cluster for all cells in the dataset
+    cluster_dict = dict(zip(df_cluster["CELL_ID"].tolist(), 
+                            df_cluster["kmeans_cluster"].tolist()))
+    
+    # get the kmeans cluster for each cell in the current region
+    cur_kmeans_clusters = [cluster_dict[x] for x in df_cur["CELL_ID"].tolist()]
 
-        np_embed = df_embedding.to_numpy()
+    embed_mat = np.full((n_kmeans_clusters, n_kmeans_clusters), np.nan)
+    coord_mat = np.full((n_kmeans_clusters, n_kmeans_clusters), np.nan)
 
-        df_cluster = pd.read_csv(output_dir+"/kmeans_cluster.csv", 
-                                header=0)
-        
-        # mapping from CELL_ID to kmeans cluster for all cells in the dataset
-        cluster_dict = dict(zip(df_cluster["CELL_ID"].tolist(), 
-                                df_cluster["kmeans_cluster"].tolist()))
-        
-        # get the kmeans cluster for each cell in the current region
-        cur_kmeans_clusters = [cluster_dict[x] for x in df_cur["CELL_ID"].tolist()]
+    counter_cluster = Counter(cur_kmeans_clusters)
 
-        embed_mat = np.full((n_kmeans_clusters, n_kmeans_clusters), np.nan)
-        coord_mat = np.full((n_kmeans_clusters, n_kmeans_clusters), np.nan)
+    for i in range(n_kmeans_clusters-1):
+        if counter_cluster[i] >= n_cells_threshold:
+            rows_i = [x for x,y in enumerate(cur_kmeans_clusters) if y==i]
+            embed_slice_i = np_embed[rows_i]
+            embed_i = np.mean(embed_slice_i, axis=0)
+            for j in range(i+1, n_kmeans_clusters):
+                if counter_cluster[j] >= n_cells_threshold:
+                    rows_j = [x for x,y in enumerate(cur_kmeans_clusters) if y==j]
+                    embed_slice_j = np_embed[rows_j]
+                    embed_j = np.mean(embed_slice_j, axis=0)
+                    embed_l2 = np.linalg.norm(embed_i - embed_j)
+                    coords_mat_sub = cur_coords_mat[rows_i][:, rows_j]
+                    min_i = np.min(coords_mat_sub, axis=1)
+                    min_j = np.min(coords_mat_sub, axis=0)
+                    q_i = np.quantile(min_i, 0.9)
+                    q_j = np.quantile(min_j, 0.9)
+                    min_q = min([q_i, q_j])
+                    embed_mat[i,j] = embed_l2
+                    coord_mat[i,j] = min_q
+                    embed_mat[j,i] = embed_l2
+                    coord_mat[j,i] = min_q
 
-        counter_cluster = Counter(cur_kmeans_clusters)
+    embed_output_dir = os.path.join(output_dir, "embedding_dist_in_image")
+    coord_output_dir = os.path.join(output_dir, "coord_dist_in_image")
+    os.makedirs(embed_output_dir, exist_ok=True)
+    os.makedirs(coord_output_dir, exist_ok=True)
 
-        for i in range(n_kmeans_clusters-1):
-            if counter_cluster[i] >= n_cells_threshold:
-                rows_i = [x for x,y in enumerate(cur_kmeans_clusters) if y==i]
-                embed_slice_i = np_embed[rows_i]
-                embed_i = np.mean(embed_slice_i, axis=0)
-                for j in range(i+1, n_kmeans_clusters):
-                    if counter_cluster[j] >= n_cells_threshold:
-                        rows_j = [x for x,y in enumerate(cur_kmeans_clusters) if y==j]
-                        embed_slice_j = np_embed[rows_j]
-                        embed_j = np.mean(embed_slice_j, axis=0)
-                        embed_l2 = np.linalg.norm(embed_i - embed_j)
-                        coords_mat_sub = cur_coords_mat[rows_i][:, rows_j]
-                        min_i = np.min(coords_mat_sub, axis=1)
-                        min_j = np.min(coords_mat_sub, axis=0)
-                        q_i = np.quantile(min_i, 0.9)
-                        q_j = np.quantile(min_j, 0.9)
-                        min_q = min([q_i, q_j])
-                        embed_mat[i,j] = embed_l2
-                        coord_mat[i,j] = min_q
-                        embed_mat[j,i] = embed_l2
-                        coord_mat[j,i] = min_q
+    np.savetxt(os.path.join(embed_output_dir, f"embedding_dist_{cur_region}.csv"), 
+            embed_mat, delimiter=",")
+            
+    np.savetxt(os.path.join(coord_output_dir, f"coord_dist_{cur_region}.csv"), 
+            coord_mat, delimiter=",")
 
-        embed_output_dir = os.path.join(output_dir, "embedding_dist_in_image")
-        coord_output_dir = os.path.join(output_dir, "coord_dist_in_image")
-        os.makedirs(embed_output_dir, exist_ok=True)
-        os.makedirs(coord_output_dir, exist_ok=True)
-
-        np.savetxt(os.path.join(embed_output_dir, f"embedding_dist_{cur_region}.csv"), 
-                embed_mat, delimiter=",")
-                
-        np.savetxt(os.path.join(coord_output_dir, f"coord_dist_{cur_region}.csv"), 
-                coord_mat, delimiter=",")
-        
-        if image_ind % 100 == 0:
-            print("done with image index "+str(image_ind))
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Finish computing embedding distance and physical distance based on given image: ", current_time)
 
 
 if __name__ == "__main__":

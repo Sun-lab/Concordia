@@ -42,7 +42,7 @@ To generate graphs for a new dataset, add a new named configuration block in the
 
 For computational time consideration, it is recommended to generate graph objects for each image in a dataset separately and run in parallel, and move individual files together to one folder. 
 
-The step of generating graph objects for each image one by one, taking Cords et al. 2024 data as an example, can be done by running 
+The step of generating graph objects for each image one by one (can be parallelized), taking Cords et al. 2024 data as an example, can be done by running 
 
 [generate_graphs_per_image.sh](https://github.com/Sun-lab/Concordia/blob/main/generate_graphs_per_image.sh)
 
@@ -64,6 +64,8 @@ which calls
 
 [train.py](https://github.com/Sun-lab/Concordia/blob/main/train.py)
 
+The `sparse_mincut_pool` function called has a documentation [here](https://github.com/Sun-lab/sparse_mincut_pool/tree/main).
+
 ## Step4. Obtain domains
 
 ### step4.1 Run K-means on embeddings to get a relatively large number of clusters
@@ -78,7 +80,7 @@ which calls
 
 ### step4.2 Within each image, compute the embedding distance and physical distance between any pair of clusters
 
-Taking Cords et al. 2024 data as an example, this step can be done by
+Taking Cords et al. 2024 data as an example, this step (can be parallelized) can be done by
 
 [cluster_dist_in_image.sh](https://github.com/Sun-lab/Concordia/blob/main/cluster_dist_in_image.sh)
 

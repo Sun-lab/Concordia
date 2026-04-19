@@ -1,5 +1,5 @@
 # Concordia
-Consistent spatial domain detection across tissues via graph neural networks on augmented graphs
+Spatial Domain Detection via Augmented Graphs for Population-Level Spatial Proteomics
 
 ## Step 1. Prepare raw data files
 

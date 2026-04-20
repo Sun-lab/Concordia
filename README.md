@@ -88,14 +88,27 @@ which calls
 
 [cluster_dist_in_image.py](https://github.com/Sun-lab/Concordia/blob/main/cluster_dist_in_image.py)
 
+
 ### step4.3 Get final weighted distance matrix, merge clusters into domains
 
-Taking Cords et al. 2024 data as an example, this step can be done by
+To get the final weighted distance matrix, first specify the parameters according to the dataset in the file `data_utilities.R`:
+
+1. R data frame:
+   - `df`: the R data frame of the image information. typically loaded from `region_list.csv` prepared in Step 1
+
+2. Paths:
+   - `raw_dir`: path to the folder containing the per-image/tissue .csv files prepared in Step 1
+
+3. Other parameters:
+   - `n_cells_threshold`: integer minimum number of cells a cluster must contain in a given image to be included when computing embedding and physical distances between clusters per image, changes according to different datasets (e.g., `30`)
+   - `n_images_threshold`: the number of images threshold for deciding for each pair of clusters, whether to aggregate the distances across images. Only aggregate if there are at least `n_images_threshold` images with at least `n_cells_threshold` in each of the two clusters. Changes according to different datasets (e.g., `30`).
+
+After preparing the parameters, taking Cords et al. 2024 data as an example, this step of getting final domain annotation can be done by
 
 [merge_clusters_to_domains.sh](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.sh)
 
 which calls
 
-[merge_clusters_to_domains.py](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.py)
+[merge_clusters_to_domains.R](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.R)
 
 The final output file is `domain_annotation_for_cells.csv`, which gives the correspondance between `CELL_ID` and `domain` annotation for all cells from all images in the dataset. 

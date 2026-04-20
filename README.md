@@ -56,7 +56,7 @@ The moving of the graph objects and other relevant files can be done by:
 
 Notes on random seed setting:
 
-Random seeds can be set for the graph generation process by modifying the code. Although, even under the contol of a fixed random seed for each image, the agumented graphs for the same image from two runs may have difference, due to the ranking difference caused by floating number accuracy issue in the step 1 graph extension step (local graph). 
+Random seeds can be set for the graph generation process by modifying the code. Although, even under the control of a fixed random seed for each image, the agumented graphs for the same image from two runs may have difference, due to the ranking difference caused by floating number accuracy issue in the step 1 graph extension step (local graph). 
 
 ## Step3. Train GNN model with sparse_mincut_pool loss and save cell embeddings out
 

@@ -115,4 +115,8 @@ which calls
 
 [merge_clusters_to_domains.R](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.R)
 
-The final output file is `domain_annotation_for_cells.csv`, which gives the correspondance between `CELL_ID` and `domain` annotation for all cells from all images in the dataset. 
+The final output file is `domain_annotation_for_cells.csv`, which gives the correspondance between `CELL_ID` and `domain` annotation for all cells from all images in the dataset.
+
+## Citation
+
+Liu, Si, Li Hsu, and Wei Sun. "Concordia: Spatial Domain Detection via Augmented Graphs for Population-Level Spatial Proteomics." bioRxiv (2026): 2026-04. [https://www.biorxiv.org/content/10.64898/2026.04.19.719422v1](https://www.biorxiv.org/content/10.64898/2026.04.19.719422v1).

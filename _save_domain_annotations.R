@@ -137,10 +137,10 @@ save_domain_annotations <- function(dir, region_ids, n_kmeans_clusters,
   
   dim(count_clusters_hard)
   
-  print(sum(coexist_pairs_count >= 0.9*nrow(df)))
-  print(sum(coexist_pairs_count >= 0.8*nrow(df)))
-  print(sum(coexist_pairs_count >= 0.7*nrow(df)))
-  print(sum(coexist_pairs_count >= 0.6*nrow(df)))
+  print(sum(coexist_pairs_count >= 0.9*nrow(count_clusters_hard)))
+  print(sum(coexist_pairs_count >= 0.8*nrow(count_clusters_hard)))
+  print(sum(coexist_pairs_count >= 0.7*nrow(count_clusters_hard)))
+  print(sum(coexist_pairs_count >= 0.6*nrow(count_clusters_hard)))
   print(sum(coexist_pairs_count >= n_images_threshold))
   
   df_cooccur = data.frame(cluster_i = col_cluster1, 

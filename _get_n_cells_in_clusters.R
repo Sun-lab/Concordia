@@ -5,7 +5,7 @@
 
 get_n_cells_in_clusters <- function(raw_dir, dir, region_ids, n_kmeans_clusters){
   
-  cluster_file = file.path(dir, "/kmeans_cluster.csv")
+  cluster_file = file.path(dir, "kmeans_cluster.csv")
   df_cluster = read.csv(cluster_file, header=TRUE)
   dim(df_cluster)  
   head(df_cluster)

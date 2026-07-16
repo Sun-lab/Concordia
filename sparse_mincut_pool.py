@@ -71,8 +71,8 @@ def sparse_mincut_pool(
     num_nodes = x.shape[0]
 
     norm_edge_index, norm_edge_weight = gcn_norm(
-            edge_index, edge_weight=None, num_nodes=num_nodes,
-            add_self_loops=False, dtype=float)
+        edge_index, edge_weight=None, num_nodes=num_nodes,
+        add_self_loops=False, dtype=x.dtype)
 
     adj_csr = to_torch_csr_tensor(norm_edge_index,
                                   norm_edge_weight,
@@ -90,12 +90,14 @@ def sparse_mincut_pool(
     deg = scatter(norm_edge_weight, idx, dim=0,
                   dim_size=num_nodes, reduce='sum')
 
-    d_edge_index = torch.tensor([list(range(deg.shape[0])),
-                                 list(range(deg.shape[0]))])
+    d_idx = torch.arange(deg.shape[0], device=deg.device)
+    d_edge_index = torch.stack([d_idx, d_idx], dim=0)
 
-    d_csr = to_torch_csr_tensor(d_edge_index,
-                                deg,
-                                [deg.shape[0], deg.shape[0]])
+    d_csr = to_torch_csr_tensor(
+        d_edge_index,
+        deg,
+        size=(deg.shape[0], deg.shape[0]),
+    )
 
     # matrix multiplication between unbatched matrices
     d_s = spmm(d_csr.to(torch.float).to(s.device), s)

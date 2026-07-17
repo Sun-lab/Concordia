@@ -1,7 +1,8 @@
 
-save_domain_annotations <- function(dir, region_ids, n_kmeans_clusters, 
+save_domain_annotations <- function(dir, domain_dir, region_ids, n_kmeans_clusters, 
                                 n_cells_threshold, n_images_threshold, 
                                 n_domains){
+  dir.create(domain_dir, recursive=TRUE, showWarnings=FALSE)
   
   cluster_file = file.path(dir, "kmeans_cluster.csv")
   df_cluster = read.csv(cluster_file, header=TRUE)
@@ -212,11 +213,11 @@ save_domain_annotations <- function(dir, region_ids, n_kmeans_clusters,
   row.names(weighted_matrix) = paste0("cluster_", as.character(0:(n_kmeans_clusters-1)))
   
   # save the weighted distance matrix out to a .rds file
-  saveRDS(weighted_matrix, file = file.path(dir, "weighted_dist_matrix.rds"))
+  saveRDS(weighted_matrix, file = file.path(domain_dir, "weighted_dist_matrix.rds"))
   
   weighted_dist = as.dist(weighted_matrix)
   
-  output_figure = file.path(dir, "weighted_dist_hclust.pdf")
+  output_figure = file.path(domain_dir, "weighted_dist_hclust.pdf")
   pdf(file = output_figure, 
       width = max(0.8*n_domains, 6), height = 4)
   hc = hclust(weighted_dist, method = "complete", members = NULL)
@@ -231,7 +232,7 @@ save_domain_annotations <- function(dir, region_ids, n_kmeans_clusters,
   df_clusterCut$cluster = row.names(df_clusterCut)
   
   write.csv(df_clusterCut, 
-            paste0(dir, "/domain_kmeans_clusters_membership.csv"), 
+            file.path(domain_dir, "domain_kmeans_clusters_membership.csv"), 
             row.names=FALSE)
 
   df_cluster$kmeans_cluster_string = paste0("cluster_", 
@@ -246,9 +247,8 @@ save_domain_annotations <- function(dir, region_ids, n_kmeans_clusters,
   df_output = df_cluster[, c("CELL_ID", "domain")]
   
   write.csv(df_output, 
-            paste0(dir, "/domain_annotation_for_cells.csv"), 
+            file.path(domain_dir, "domain_annotation_for_cells.csv"), 
             row.names=FALSE)
   
 }
-
 

@@ -52,31 +52,53 @@ import gc
 # this line below is needed if want to import function from other python files in local directory
 sys.path.append(os.getcwd())
 
-from data_utilities import data_features
+from data_utilities import data_features, make_model_run_id
 from graph_data_class import CellularGraphDataset, construct_graph_for_region
-
-TOP_K = 4
-CTG_COMP_DIST_CUTOFF = 0.176
 
 import argparse
 
 parser = argparse.ArgumentParser(description='generate extend graph data objects with path purity and downsampling')
-parser.add_argument('--data_name', type=str, help='the name of the dataset')
-parser.add_argument('--data_dir', type=str, help='the overall folder of the dataset')
+parser.add_argument('--data_name', default="cords_2024", type=str, help='the name of the dataset')
+parser.add_argument('--data_dir', default="./data/Cords_data", type=str, help='the overall folder of the dataset')
 parser.add_argument('--region_index', type=int, default=0, help='the index of the region to generate the object for')
 parser.add_argument('--degree_limit', type=int, default=20, help='desired average degree of nodes in each fully extended graph')
-parser.add_argument('--prepare_folder', type=str, required=True, help='the name of the folder to save the preparation graph files to')                                  
+parser.add_argument('--dist_cutoff', type=float, default=16, help='distance cutoff for constructing the base graph')
+parser.add_argument('--expanded_edge_cutoff', type=float, default=48, help='search radius for candidate cells in the first extension step')
+parser.add_argument('--top_k', type=int, default=4, help='number of nearest candidate cells to add in the first extension step')
+parser.add_argument('--ctg_comp_dist_cutoff', type=float, default=0.176, help='cell type group composition distance cutoff for adding edges')
+parser.add_argument('--group_scheme', type=str, default="default", help='fine-to-coarse cell type grouping scheme')
+parser.add_argument('--model_run_id', type=str, default=None, help='dataset-aware identifier for this graph/model parameter set')
+parser.add_argument('--prepare_folder', type=str, default="graph_objects_prepare", help='the name of the folder to save the preparation graph files to')                                  
 
 def generate_data(data_name="cords_2024", 
                   data_dir="./data/Cords_data", 
                   region_index=0, 
                   degree_limit=20, 
+                  dist_cutoff=16,
+                  expanded_edge_cutoff=48,
+                  top_k=4,
+                  ctg_comp_dist_cutoff=0.176,
+                  group_scheme="default",
+                  model_run_id=None,
                   prepare_folder="graph_objects_prepare"):
 
     input_args = locals()
     print("input args are", input_args)
 
-    data_dicts  = data_features(data_name, "extended")
+    if model_run_id is None:
+        model_run_id = make_model_run_id(data_name, group_scheme, dist_cutoff,
+                                         expanded_edge_cutoff, top_k,
+                                         ctg_comp_dist_cutoff, degree_limit)
+
+    data_dicts  = data_features(data_name, "extended",
+                                group_scheme=group_scheme,
+                                dist_cutoff=dist_cutoff,
+                                expanded_edge_cutoff=expanded_edge_cutoff,
+                                top_k=top_k,
+                                ctg_comp_dist_cutoff=ctg_comp_dist_cutoff,
+                                degree_limit=degree_limit,
+                                model_run_id=model_run_id,
+                                data_dir=data_dir)
 
     NEIGHBOR_EDGE_CUTOFF = data_dicts.dist_cutoff
     PATH_PURITY_CUTOFF = data_dicts.path_purity_cutoff
@@ -86,7 +108,7 @@ def generate_data(data_name="cords_2024",
 
     cur_region_id = train_images[region_index]
 
-    prepare_dir = os.path.join(data_dir, prepare_folder)
+    prepare_dir = os.path.join(data_dir, prepare_folder, model_run_id)
 
     os.makedirs(prepare_dir, exist_ok=True)
     
@@ -121,9 +143,10 @@ def generate_data(data_name="cords_2024",
         'figure_folder_name': 'figure',
         'node_features': ["cell_type_group", "neighborhood_composition"],
         'neighbor_edge_cutoff': NEIGHBOR_EDGE_CUTOFF,
-        'top_k': TOP_K,
+        'expanded_edge_cutoff': expanded_edge_cutoff,
+        'top_k': top_k,
         'degree_limit': degree_limit,
-        'ctg_comp_dist_cutoff': CTG_COMP_DIST_CUTOFF,
+        'ctg_comp_dist_cutoff': ctg_comp_dist_cutoff,
         'path_purity_cutoff': PATH_PURITY_CUTOFF,
         'cell_type_mapping': data_dicts.cell_type_mapping,
         'group_ct_mapping': data_dicts.group_ct_mapping, 

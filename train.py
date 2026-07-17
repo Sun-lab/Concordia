@@ -46,7 +46,7 @@ import argparse
 # this line below is needed if want to import function from other python files in local directory
 sys.path.append(os.getcwd())
 
-from data_utilities import data_features
+from data_utilities import data_features, make_model_run_id
 from models import GCN_model
 
 from data_transformers import add_num_of_cells
@@ -72,11 +72,22 @@ parser.add_argument('--batch_size', default=64, type=int, help='batch size')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate, for example, 0.001')
 parser.add_argument('--epoch_limit', type=int, default=1000, help='max number of epoches, for example, 1000')
 parser.add_argument('--degree_limit', type=int, default=20, help='the average degree to achieve for each image in fully extended graph, for example, 20')
+parser.add_argument('--data_dir', default="./data/Cords_data", type=str, help='the overall folder of the dataset')
+parser.add_argument('--dist_cutoff', type=float, default=16, help='distance cutoff for constructing the base graph')
+parser.add_argument('--expanded_edge_cutoff', type=float, default=48, help='search radius for candidate cells in the first extension step')
+parser.add_argument('--top_k', type=int, default=4, help='number of nearest candidate cells to add in the first extension step')
+parser.add_argument('--ctg_comp_dist_cutoff', type=float, default=0.176, help='cell type group composition distance cutoff for adding edges')
+parser.add_argument('--group_scheme', type=str, default="default", help='fine-to-coarse cell type grouping scheme')
+parser.add_argument('--model_run_id', type=str, default=None, help='dataset-aware identifier for this graph/model parameter set')
 
 
 def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2", skip_type="add", 
                    device="gpu", s_dim2=40, batch_size=64,
-                   lr=0.001, epoch_limit=1000, degree_limit=20):
+                   lr=0.001, epoch_limit=1000, degree_limit=20,
+                   data_dir="./data/Cords_data", dist_cutoff=16,
+                   expanded_edge_cutoff=48, top_k=4,
+                   ctg_comp_dist_cutoff=0.176, group_scheme="default",
+                   model_run_id=None):
 
     torch.manual_seed(1629)
     random.seed(1000)
@@ -92,7 +103,20 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
     # Metadata for the chosen dataset
     # not split on dataset based on patients into training/validation/test
     # all images go to training set
-    data_dicts  = data_features(data_name, graph_type)
+    if model_run_id is None:
+        model_run_id = make_model_run_id(data_name, group_scheme, dist_cutoff,
+                                         expanded_edge_cutoff, top_k,
+                                         ctg_comp_dist_cutoff, degree_limit)
+
+    data_dicts  = data_features(data_name, graph_type,
+                                group_scheme=group_scheme,
+                                dist_cutoff=dist_cutoff,
+                                expanded_edge_cutoff=expanded_edge_cutoff,
+                                top_k=top_k,
+                                ctg_comp_dist_cutoff=ctg_comp_dist_cutoff,
+                                degree_limit=degree_limit,
+                                model_run_id=model_run_id,
+                                data_dir=data_dir)
     
     NEIGHBOR_EDGE_CUTOFF = data_dicts.dist_cutoff
     PATH_PURITY_CUTOFF = data_dicts.path_purity_cutoff
@@ -133,7 +157,10 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
         'processed_folder_name': data_dicts.processed_folder_name,
         'node_features': ["cell_type_group", "neighborhood_composition"],
         'neighbor_edge_cutoff': NEIGHBOR_EDGE_CUTOFF,
+        'expanded_edge_cutoff': expanded_edge_cutoff,
+        'top_k': top_k,
         'degree_limit': degree_limit,
+        'ctg_comp_dist_cutoff': ctg_comp_dist_cutoff,
         'path_purity_cutoff': PATH_PURITY_CUTOFF,
         'cell_type_mapping': data_dicts.cell_type_mapping,
         'group_ct_mapping': data_dicts.group_ct_mapping,

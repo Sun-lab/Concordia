@@ -2,16 +2,24 @@
 # data_name
 
 
-data_features <- function(data_name){
+data_features <- function(data_name, model_run_id=NULL, data_dir=NULL){
   
   # Lung cancer dataset
   if (data_name=="cords_2024"){
     
-    df_images = read.csv(paste0("./data/Cords_data/region_list.csv"),
+    if (is.null(data_dir)){
+      data_dir = "./data/Cords_data"
+    }
+    
+    df_images = read.csv(file.path(data_dir, "region_list.csv"),
                          header=TRUE)
     
-    raw_dir = "./data/Cords_data/raw_data"
-    result_subfolder = data_name
+    raw_dir = file.path(data_dir, "raw_data")
+    if (is.null(model_run_id)){
+      result_subfolder = data_name
+    }else{
+      result_subfolder = model_run_id
+    }
     
     n_cells_threshold = 30
     # the number of images threshold for deciding for each pair of clusters
@@ -19,6 +27,24 @@ data_features <- function(data_name){
     # only aggregate if there are at least n_images_threshold images with 
     # at least n_cells_threshold in each of the two clusters
     n_images_threshold = 30
+  }else{
+    
+    if (is.null(data_dir)){
+      data_dir = file.path("./data", data_name)
+    }
+    
+    df_images = read.csv(file.path(data_dir, "region_list.csv"),
+                         header=TRUE)
+    
+    raw_dir = file.path(data_dir, "raw_data")
+    if (is.null(model_run_id)){
+      result_subfolder = data_name
+    }else{
+      result_subfolder = model_run_id
+    }
+    
+    n_cells_threshold = 30
+    n_images_threshold = 1
     
   }
   

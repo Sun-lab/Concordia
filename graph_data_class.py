@@ -928,6 +928,7 @@ class CellularGraphDataset(Dataset):
                  figure_folder_name='figure',
                  node_features=["cell_type_group", "neighborhood_composition"],
                  neighbor_edge_cutoff=16,
+                 expanded_edge_cutoff=48,
                  top_k=4,
                  degree_limit = 20,
                  ctg_comp_dist_cutoff=0.176,
@@ -951,6 +952,7 @@ class CellularGraphDataset(Dataset):
             figure_folder_name (str): name of the sub-folder containing figures for graphs
             node_features (list): list of feature items to get for the nodes
             neighbor_edge_cutoff (int): distance cutoff used to decide neighbors in the basic graph
+            expanded_edge_cutoff (int): distance cutoff used to search candidate cells in the first extension step
             top_k (int): for the 1st graph extension, number of closest neighbors to consider in terms of distance in cell type group composition
             degree_limit (int): desired average degree of the graph after two steps of extensions
             ctg_comp_dist_cutoff (float): cell type group composition distance cutoff for adding edges
@@ -980,6 +982,7 @@ class CellularGraphDataset(Dataset):
         self.cell_type_mapping = cell_type_mapping
         self.group_ct_mapping = group_ct_mapping
         self.neighbor_edge_cutoff = neighbor_edge_cutoff
+        self.expanded_edge_cutoff = expanded_edge_cutoff
         self.top_k = top_k
         self.degree_limit = degree_limit
         self.ctg_comp_dist_cutoff = ctg_comp_dist_cutoff
@@ -1143,7 +1146,7 @@ class CellularGraphDataset(Dataset):
                                                                     cell_data_file=os.path.join(self.raw_cell_info_path, '%s.csv' % region_id),
                                                                     np_comp=np_upto2nd, 
                                                                     top_k=self.top_k,
-                                                                    expanded_edge_cutoff=3*self.neighbor_edge_cutoff,
+                                                                    expanded_edge_cutoff=self.expanded_edge_cutoff,
                                                                     ctg_comp_dist_cutoff=self.ctg_comp_dist_cutoff,
                                                                     degree_limit=self.degree_limit,
                                                                     node_features=self.node_features,
@@ -1191,7 +1194,7 @@ class CellularGraphDataset(Dataset):
                                                     cell_data_file=os.path.join(self.raw_cell_info_path, '%s.csv' % region_id),
                                                     np_comp=np_upto2nd, 
                                                     top_k=self.top_k,
-                                                    expanded_edge_cutoff=3*self.neighbor_edge_cutoff,
+                                                    expanded_edge_cutoff=self.expanded_edge_cutoff,
                                                     ctg_comp_dist_cutoff=self.ctg_comp_dist_cutoff,
                                                     node_features=self.node_features,
                                                     **self.feature_kwargs)

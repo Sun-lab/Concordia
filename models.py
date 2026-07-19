@@ -24,8 +24,8 @@ class GCN_model(torch.nn.Module):
         
         if self.skip_type in ["no", "add", "add2"]:
             self.skip_dim = 64
-        elif self.skip_type in ["concat", "concat2"]:
-            self.skip_dim = 2*64
+        else:
+            raise ValueError(f"Unsupported skip_type: {self.skip_type}")
 
         self.relu = nn.ReLU()
 
@@ -79,8 +79,6 @@ class GCN_model(torch.nn.Module):
             out = self.conv2(x, edge_index)
             if self.skip_type in ["add2"]:
                 out += identity
-            elif self.skip_type in ["concat2"]:
-                out = torch.cat((out, identity), 1)
             out = self.relu(out)
             out = self.conv3(out, edge_index)    
 
@@ -93,8 +91,6 @@ class GCN_model(torch.nn.Module):
 
         if self.skip_type in ["add", "add2"]:
             out += identity
-        elif self.skip_type in ["concat", "concat2"]:
-            out = torch.cat((out, identity), 1)
 
         out = self.relu(out)
 

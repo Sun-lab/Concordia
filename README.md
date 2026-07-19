@@ -20,6 +20,8 @@ Processed files for the lung cancer dataset (originally version of data is from 
 data/Cords_data
 ```
 
+3. Random seed file (optional): a file with random seeds for generating the graphs for each image, with the number of random seeds equal to the number of images. If not provided, random seed 0 will be used for all images. An example random seed file for the lung cancer dataset is [random_seeds.txt](https://github.com/Sun-lab/Concordia/tree/main/data/Cords_data). 
+
 ## Step 2. Generate graphs
 
 To generate graphs for a new dataset, add a new named configuration block in the `data_features` class in `data_utilities.py` by adding an `if data_name == "<your_dataset_name>":` block and specifying the following fields:

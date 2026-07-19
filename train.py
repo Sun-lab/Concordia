@@ -64,7 +64,7 @@ parser.add_argument('--gcn_type', default="gat2", type=str,
                                    choices=['gcn', 'gat', 'gat2'],
                                    help='what gcn layer to use')
 parser.add_argument('--skip_type', default="add", type=str,
-                                   choices=['no', 'add', 'concat', 'add2', 'concat2'],
+                                   choices=['no', 'add', 'add2'],
                                    help='which type of skip connection to use')
 parser.add_argument('--device', default="gpu", type=str, help='whether to use CPU or GPU')
 parser.add_argument('--s_dim2', default=40, type=int, help='number of columns in soft assignment matrix')

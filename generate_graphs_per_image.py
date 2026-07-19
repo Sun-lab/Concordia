@@ -85,6 +85,16 @@ def generate_data(data_name="cords_2024",
     input_args = locals()
     print("input args are", input_args)
 
+    # Settings
+    # load random seeds generated from https://www.random.org
+    if os.path.exists(data_dir+"/random_seeds.txt"):
+        df_seeds = pd.read_csv(data_dir+"/random_seeds.txt", sep=" ", header=None)
+        cur_random_seed = df_seeds[0].tolist()[region_index]
+    else:
+        cur_random_seed = 0
+
+    random.seed(cur_random_seed)
+
     if model_run_id is None:
         model_run_id = make_model_run_id(data_name, group_scheme, dist_cutoff,
                                          expanded_edge_cutoff, top_k,

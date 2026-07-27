@@ -69,7 +69,7 @@ parser.add_argument('--skip_type', default="add", type=str,
 parser.add_argument('--device', default="gpu", type=str, help='whether to use CPU or GPU')
 parser.add_argument('--s_dim2', default=40, type=int, help='number of columns in soft assignment matrix')
 parser.add_argument('--batch_size', default=64, type=int, help='batch size')
-parser.add_argument('--lr', type=float, default=1e-4, help='learning rate, for example, 0.001')
+parser.add_argument('--lr', type=float, default=1e-4, help='learning rate, for example, 0.0001')
 parser.add_argument('--epoch_limit', type=int, default=1000, help='max number of epoches, for example, 1000')
 parser.add_argument('--degree_limit', type=int, default=20, help='the average degree to achieve for each image in fully extended graph, for example, 20')
 parser.add_argument('--data_dir', default="./data/Cords_data", type=str, help='the overall folder of the dataset')

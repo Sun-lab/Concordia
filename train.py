@@ -69,7 +69,7 @@ parser.add_argument('--skip_type', default="add", type=str,
 parser.add_argument('--device', default="gpu", type=str, help='whether to use CPU or GPU')
 parser.add_argument('--s_dim2', default=40, type=int, help='number of columns in soft assignment matrix')
 parser.add_argument('--batch_size', default=64, type=int, help='batch size')
-parser.add_argument('--lr', type=float, default=1e-3, help='learning rate, for example, 0.001')
+parser.add_argument('--lr', type=float, default=1e-4, help='learning rate, for example, 0.001')
 parser.add_argument('--epoch_limit', type=int, default=1000, help='max number of epoches, for example, 1000')
 parser.add_argument('--degree_limit', type=int, default=20, help='the average degree to achieve for each image in fully extended graph, for example, 20')
 parser.add_argument('--data_dir', default="./data/Cords_data", type=str, help='the overall folder of the dataset')
@@ -83,7 +83,7 @@ parser.add_argument('--model_run_id', type=str, default=None, help='dataset-awar
 
 def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2", skip_type="add", 
                    device="gpu", s_dim2=40, batch_size=64,
-                   lr=0.001, epoch_limit=1000, degree_limit=20,
+                   lr=0.0001, epoch_limit=1000, degree_limit=20,
                    data_dir="./data/Cords_data", dist_cutoff=16,
                    expanded_edge_cutoff=48, top_k=4,
                    ctg_comp_dist_cutoff=0.176, group_scheme="default",

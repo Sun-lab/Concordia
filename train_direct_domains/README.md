@@ -2,6 +2,7 @@
 
 Example use Cords et al. 2024 non small-cell lung cancer dataset.
 
+These code should be put and run at the same folder level as those outside this folder. 
 
 ### Generate graph objects for each image one by one
 

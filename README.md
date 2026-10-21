@@ -1,7 +1,14 @@
+![Python 3.8.18](https://shields.io)
+![R 4.4.0](https://shields.io)
+
 # Concordia
 Spatial Domain Detection via Augmented Graphs for Population-Level Spatial Proteomics
 
-## Step 1. Prepare raw data files
+This repo is organized such that the code files in the current layer are needed for all settings, while those specific to each settings are under each folder. 
+
+## Preparation
+
+### Item 1. Prepare raw data files
 
 Raw data files involve two types of files:
 
@@ -20,9 +27,11 @@ Processed files for the lung cancer dataset (originally version of data is from 
 data/Cords_data
 ```
 
-3. Random seed file (optional): a file with random seeds for generating the graphs for each image, with the number of random seeds equal to the number of images. If not provided, random seed 0 will be used for all images. An example random seed file for the lung cancer dataset is [random_seeds.txt](https://github.com/Sun-lab/Concordia/tree/main/data/Cords_data). 
+3. Random seed file for model training (required): a file with random seeds for training an ensemble of 10 GNN models. Each run needs 3 random seeds, for torch.manual_seed, random.seed, and np.random.seed. So 30 random seeds are needed. The default example random seed file used for model training is [random_seeds_10_triples.txt](https://github.com/Sun-lab/Concordia/tree/main/data/random_seeds_10_triples.txt). 
 
-## Step 2. Generate graphs
+4. Random seed file for generating graphs (optional): a file with random seeds for generating the graphs for each image, with the number of random seeds equal to the number of images. If not provided, random seed 0 will be used for all images. An example random seed file for the lung cancer dataset is [random_seeds.txt](https://github.com/Sun-lab/Concordia/tree/main/data/Cords_data). 
+
+### Item 2. Prepare to generate graphs
 
 To generate graphs for a new dataset, add a new named configuration block in the `data_features` class in `data_utilities.py` by adding an `if data_name == "<your_dataset_name>":` block and specifying the following fields:
 
@@ -42,83 +51,26 @@ To generate graphs for a new dataset, add a new named configuration block in the
    - `path_purity_cutoff`: a value between 0 and 1; the edges between pairs of cells having shortest paths with purity below this threshold are excluded as candidate edges in the second step extension, default `0.90`
    - `n_cells_threshold`: integer minimum number of cells a cluster must contain in a given image to be included when computing embedding and physical distances between clusters per image, changes according to different datasets (e.g., `30`)
 
-For computational time consideration, it is recommended to generate graph objects for each image in a dataset separately and run in parallel, and move individual files together to one folder. 
+## Obtain the domains
 
-The step of generating graph objects for each image one by one (can be parallelized), taking Cords et al. 2024 data as an example, can be done by running 
-
-[generate_graphs_per_image.sh](https://github.com/Sun-lab/Concordia/blob/main/generate_graphs_per_image.sh)
-
-which calls the file 
-
-[generate_graphs_per_image.py](https://github.com/Sun-lab/Concordia/blob/main/generate_graphs_per_image.py)
-
-The moving of the graph objects and other relevant files can be done by:
-
-[reorganize_graph_objects.ipynb](https://github.com/Sun-lab/Concordia/blob/main/reorganize_graph_objects.ipynb)
-
-Notes on random seed setting:
-
-Random seeds can be set for the graph generation process by modifying the code. Although, even under the control of a fixed random seed for each image, the agumented graphs for the same image from two runs may have difference, due to the ranking difference caused by floating number accuracy issue in the step 1 graph extension step (local graph). 
-
-## Step3. Train GNN model with sparse_mincut_pool loss and save cell embeddings out
-
-Taking Cords et al. 2024 data as an example, the model training and embedding saving can be done by
-
-[train.sh](https://github.com/Sun-lab/Concordia/blob/main/train.sh)
-
-which calls
-
-[train.py](https://github.com/Sun-lab/Concordia/blob/main/train.py)
-
-The `sparse_mincut_pool` function called has a documentation [here](https://github.com/Sun-lab/sparse_mincut_pool/tree/main).
-
-## Step4. Obtain domains
-
-### step4.1 Run K-means on embeddings to get a relatively large number of clusters
-
-Taking Cords et al. 2024 data as an example, this step can be done by
-
-[k_means_on_embeddings.sh](https://github.com/Sun-lab/Concordia/blob/main/k_means_on_embeddings.sh)
-
-which calls
-
-[k_means_on_embeddings.py](https://github.com/Sun-lab/Concordia/blob/main/k_means_on_embeddings.py)
-
-### step4.2 Within each image, compute the embedding distance and physical distance between any pair of clusters
-
-Taking Cords et al. 2024 data as an example, this step (can be parallelized) can be done by
-
-[cluster_dist_in_image.sh](https://github.com/Sun-lab/Concordia/blob/main/cluster_dist_in_image.sh)
-
-which calls
-
-[cluster_dist_in_image.py](https://github.com/Sun-lab/Concordia/blob/main/cluster_dist_in_image.py)
+There are three ways to obtain the domains. For each approach, code files for one example dataset organized under a corresponding folder, with a Readme file. 
 
 
-### step4.3 Get final weighted distance matrix, merge clusters into domains
+### Train model and directly obtain domains from embeddings
 
-To get the final weighted distance matrix, first specify the parameters according to the dataset in the file `data_utilities.R`:
+Recommended for images with complex spatial structures, for example, tumor invasive front:
 
-1. R data frame:
-   - `df`: the R data frame of the image information. typically loaded from `region_list.csv` prepared in Step 1
+[train_direct_domains](https://github.com/Sun-lab/Concordia/blob/main/train_direct_domains)
 
-2. Paths:
-   - `raw_dir`: path to the folder containing the per-image/tissue .csv files prepared in Step 1
+### Train model and directly obtain domains in a two-step procedure
 
-3. Other parameters:
-   - `n_cells_threshold`: integer minimum number of cells a cluster must contain in a given image to be included when computing embedding and physical distances between clusters per image, changes according to different datasets (e.g., `30`)
-   - `n_images_threshold`: the number of images threshold for deciding for each pair of clusters, whether to aggregate the distances across images. Only aggregate if there are at least `n_images_threshold` images with at least `n_cells_threshold` in each of the two clusters. Changes according to different datasets (e.g., `30`).
+Recommended for well structured tissues, for example, mouse medial prefrontal cortex,:
 
-After preparing the parameters, taking Cords et al. 2024 data as an example, this step of getting final domain annotation can be done by
+[train_two_steps](https://github.com/Sun-lab/Concordia/blob/main/train_two_steps)
 
-[merge_clusters_to_domains.sh](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.sh)
+### Transfer domains from a model trained on a different dataset
 
-which calls
+Given the models and domains obtained from a model trained on a training dataset, for independent dataset, if it is from the same type of tissues, the fine-scale cell types can be grouped into the same set of coarse-scale cell type as used by the training data, and the units of physical distance in two datasets are the same, then domains learnt from the training dataset can be transferred to cells in the independent dataset. This applies when the domains learnt from the training dataset were obtained directly through running K-means on the embeddings. 
 
-[merge_clusters_to_domains.R](https://github.com/Sun-lab/Concordia/blob/main/merge_clusters_to_domains.R)
 
-The final output file is `domain_annotation_for_cells.csv`, which gives the correspondance between `CELL_ID` and `domain` annotation for all cells from all images in the dataset.
-
-## Citation
-
-Liu, Si, Li Hsu, and Wei Sun. "Concordia: Spatial Domain Detection via Augmented Graphs for Population-Level Spatial Proteomics." bioRxiv (2026): 2026-04. [https://www.biorxiv.org/content/10.64898/2026.04.19.719422v1](https://www.biorxiv.org/content/10.64898/2026.04.19.719422v1).
+[transfer_direct_domains](https://github.com/Sun-lab/Concordia/blob/main/transfer_direct_domains)

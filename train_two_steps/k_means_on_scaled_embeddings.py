@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# run k-means on the embedding space of the trained GNN model
+# run k-means on per-model-scaled cell embeddings concatenated across repeated
+# model runs
+#
+#
+# reads   ./results_rs/<model_run_id>__repeat_<i>/<graph_type>/epoch_<epoch>/linear1
+# writes  ./results_rs_ensemble_scaled/<model_run_id>__ensemble_<n_repeats>/
+#           <graph_type>/clusters_k<n_kmeans_clusters>
 
 
 import numpy as np
@@ -20,7 +26,7 @@ from collections import Counter
 from data_utilities import data_features, make_model_run_id
 
 
-parser = argparse.ArgumentParser(description='k-means on model embedding space')
+parser = argparse.ArgumentParser(description="k-means on concatenated embeddings from repeated runs")
 
 parser.add_argument('--data_name', default="cords_2024", type=str, help='the name of the dataset to use')
 parser.add_argument('--graph_type', default="extended", type=str,
@@ -37,8 +43,9 @@ parser.add_argument('--ctg_comp_dist_cutoff', type=float, default=0.176, help='c
 parser.add_argument('--degree_limit', type=int, default=20, help='desired average degree of nodes in each fully extended graph')
 parser.add_argument('--group_scheme', type=str, default="default", help='fine-to-coarse cell type grouping scheme')
 parser.add_argument('--model_run_id', type=str, default=None, help='dataset-aware identifier for this graph/model parameter set')
+parser.add_argument("--n_repeats", default=10, type=int, help="number of repeated runs to concatenate")
 
-def run_k_means(data_name="cords_2024",
+def run_k_means_ensemble(data_name="cords_2024",
                 graph_type="extended",
                 n_kmeans_clusters=40,
                 epoch_limit=1000,
@@ -49,14 +56,15 @@ def run_k_means(data_name="cords_2024",
                 ctg_comp_dist_cutoff=0.176,
                 degree_limit=20,
                 group_scheme="default",
-                model_run_id=None):
+                model_run_id=None,
+                n_repeats=10):
 
     input_args = locals()
     print("input args are", input_args)
 
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
-    print("Start running K-means on embeddings: ", current_time)
+    print("Start running K-means on concatenated embeddings: ", current_time)
 
     n_kmeans_clusters = int(n_kmeans_clusters)
 
@@ -79,13 +87,30 @@ def run_k_means(data_name="cords_2024",
 
     train_images = data_dicts.train_images
 
-    result_subfolder = data_dicts.result_subfolder
-
     # Settings
     raw_dir = data_dicts.raw_dir
 
-    output_dir = "./results/"+result_subfolder+"/"+graph_type
-    embedding_dir = output_dir+"/epoch_"+str(epoch_id)
+    repeat_run_ids = [model_run_id + "__repeat_" + str(i)
+                      for i in range(1, n_repeats + 1)]
+    embedding_dirs = ["./results_rs/" + run_id + "/" + graph_type +
+                      "/epoch_" + str(epoch_id)
+                      for run_id in repeat_run_ids]
+
+    for embedding_dir in embedding_dirs:
+        if not os.path.isdir(embedding_dir + "/linear1"):
+            raise FileNotFoundError("missing embedding folder: " + embedding_dir + "/linear1")
+
+    ensemble_run_id = model_run_id + "__ensemble_" + str(n_repeats)
+    # the clusters_k<k> level is what keeps two values of k from writing to one
+    # path; without it both would be one kmeans_cluster.csv
+    output_dir = ("./results_rs_ensemble_scaled/" + ensemble_run_id + "/" +
+                  graph_type + "/clusters_k" + str(n_kmeans_clusters))
+    os.makedirs(output_dir, exist_ok=True)
+
+    print("using per-model-scaled embeddings from:")
+    for run_id in repeat_run_ids:
+        print("  " + run_id)
+    print("writing results to " + output_dir)
 
     layer_chunk = []
     num_id_list = []
@@ -100,24 +125,61 @@ def run_k_means(data_name="cords_2024",
         # record the CELL_ID values for the current region and add to the list of all CELL_IDs for all regions
         num_id_list += df_cur["CELL_ID"].tolist()
 
-        # load the unactivated embedding values for the current region and add to the layer chunk
-        df_embedding = pd.read_csv(embedding_dir+"/linear1/linear1_"+cur_region+".csv",
-                                header=0)
+        # Concatenate this cell block across runs without scaling.
+        region_embeddings = []
+        n_embedding_columns = None
+        for repeat_index, embedding_dir in enumerate(embedding_dirs):
+            df_embedding = pd.read_csv(
+                embedding_dir + "/linear1/linear1_" + cur_region + ".csv",
+                header=0)
 
-        assert df_cur.shape[0]==df_embedding.shape[0]
+            if df_cur.shape[0] != df_embedding.shape[0]:
+                raise ValueError(
+                    "row count mismatch for " + cur_region + " in " +
+                    repeat_run_ids[repeat_index])
+            if n_embedding_columns is None:
+                n_embedding_columns = df_embedding.shape[1]
+            elif df_embedding.shape[1] != n_embedding_columns:
+                raise ValueError(
+                    "embedding dimension mismatch for " + cur_region + " in " +
+                    repeat_run_ids[repeat_index])
 
-        layer_chunk += df_embedding.to_numpy().tolist()
+            region_embeddings.append(df_embedding.to_numpy(dtype=np.float32))
+
+        layer_chunk.append(np.concatenate(region_embeddings, axis=1))
 
         if i%100 == 0:
             print("done with index i = "+str(i))
 
 
-    assert len(num_id_list)==len(layer_chunk)
+    X = np.concatenate(layer_chunk, axis=0)
+    assert len(num_id_list) == X.shape[0]
 
-    len(layer_chunk)
+    if not np.isfinite(X).all():
+        raise ValueError("the concatenated embeddings contain NaN or infinite values")
 
-    X = np.array(layer_chunk)
-    X.shape
+    print("concatenated embedding matrix shape:", X.shape)
+
+    # ---- put the models on a common scale ----
+    # one scalar per model: the standard deviation over all cells of all images
+    # and all n_embedding_columns dimensions of that model, pooled together
+    run_scales = []
+
+    for r in range(n_repeats):
+
+        cur_block = X[:, (r * n_embedding_columns):((r + 1) * n_embedding_columns)]
+        cur_scale = float(cur_block.std())
+
+        if not np.isfinite(cur_scale) or cur_scale == 0:
+            raise ValueError("degenerate standard deviation " + str(cur_scale) +
+                             " for " + repeat_run_ids[r])
+
+        cur_block /= cur_scale
+        run_scales.append(cur_scale)
+
+    print("overall standard deviation of each model, used to scale its block:")
+    for run_id, cur_scale in zip(repeat_run_ids, run_scales):
+        print("  " + run_id + ": " + str(cur_scale))
 
     current_time = datetime.now()
     print(current_time)
@@ -151,14 +213,18 @@ def run_k_means(data_name="cords_2024",
                             columns=["CELL_ID", "kmeans_cluster"])
     df_kmeans.shape
 
-    df_kmeans.to_csv(output_dir+"/kmeans_cluster.csv", index=False)
-    df_kmeans[:6]
+    df_kmeans.to_csv(output_dir + "/kmeans_cluster.csv", index=False)
+
+    df_runs = pd.DataFrame({"repeat_index": list(range(1, n_repeats + 1)),
+                            "model_run_id": repeat_run_ids,
+                            "overall_sd": run_scales})
+    df_runs.to_csv(output_dir + "/ensemble_runs.csv", index=False)
 
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
-    print("Finish running K-means on embeddings: ", current_time)
+    print("Finish running K-means on concatenated embeddings: ", current_time)
 
 if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
-    run_k_means(**vars(args))
+    run_k_means_ensemble(**vars(args))

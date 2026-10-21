@@ -55,6 +55,74 @@ def get_cords_cell_type_mapping():
             'tpCAF': 28,
             'vCAF': 29}
 
+def get_Danenberg_cell_type_mapping():
+
+    return {'B cells': 0,
+            'Basal': 1,
+            'CD15^{+}': 2,
+            'CD38^{+} lymphocytes': 3,
+            'CD4^{+} T cells': 4,
+            'CD4^{+} T cells & APCs': 5,
+            'CD57^{+}': 6,
+            'CD8^{+} T cells': 7,
+            'CK^{+} CXCL12^{+}': 8,
+            'CK^{lo}ER^{lo}': 9,
+            'CK^{lo}ER^{med}': 10,
+            'CK^{med}ER^{lo}': 11,
+            'CK8-18^{+} ER^{hi}': 12,
+            'CK8-18^{hi}CXCL12^{hi}': 13,
+            'CK8-18^{hi}ER^{lo}': 14,
+            'Endothelial': 15,
+            'Ep CD57^{+}': 16,
+            'Ep Ki67^{+}': 17,
+            'ER^{hi}CXCL12^{+}': 18,
+            'Fibroblasts': 19,
+            'Fibroblasts FSP1^{+}': 20,
+            'Granulocytes': 21,
+            'HER2^{+}': 22,
+            'Ki67^{+}': 23,
+            'Macrophages': 24,
+            'Macrophages & granulocytes': 25,
+            'MHC I & II^{hi}': 26,
+            'MHC I^{hi}CD57^{+}': 27,
+            'MHC^{hi}CD15^{+}': 28,
+            'Myofibroblasts': 29,
+            'Myofibroblasts PDPN^{+}': 30,
+            'T_{Reg} & T_{Ex}': 31
+        }
+
+
+def get_mpfc_cell_type_mapping():
+
+    all_celltypes = ["Smc", "Endo", "Astro", "eL6-2", "Oligo",
+                     "eL5-3", "Reln", "VIP", "eL2/3", "NPY", 
+                     "eL5-2", "Lhx6", "L5-1", "SST", "eL6-1"]
+    all_celltypes.sort()
+
+    cell_type_mapping = {}
+
+    for i, x in enumerate(all_celltypes):
+        cell_type_mapping[x] = i
+
+    return cell_type_mapping
+
+
+def get_lermi_cell_type_mapping():
+
+    all_celltypes = ["Alveolar macrophages", "AT2", "B cells", "CD4+ T cells",             
+                     "CD8+ T cells", "Classical monocytes", "DC", "Fibroblasts",
+                     "Interstitial macrophages", "Lymphatic EC", "Mast cells",
+                     "Other", "Pericytes", "Plasma cells", "Smooth muscle cells",
+                     "Tumor cells", "Venous systemic EC"]
+    all_celltypes.sort()
+
+    cell_type_mapping = {}
+
+    for i, x in enumerate(all_celltypes):
+        cell_type_mapping[x] = i
+
+    return cell_type_mapping
+
 
 def get_group_ct_mapping(data_name, group_scheme, cell_type_mapping):
     group_ct_mapping = defaultdict(set)
@@ -63,11 +131,11 @@ def get_group_ct_mapping(data_name, group_scheme, cell_type_mapping):
         for cell_type in cell_type_mapping:
             group_ct_mapping[cell_type] = set([cell_type])
 
-    elif data_name == "cords_2024" and group_scheme == "default":
+    elif ((data_name in ["cords_2024", "cords_permutate", "cords_permutate5pct"]) and (group_scheme == "default")):
         required = set(get_cords_cell_type_mapping().keys())
         if set(cell_type_mapping.keys()) != required:
             raise ValueError(
-                "group_scheme='default' for data_name='cords_2024' requires Cords cell types. "
+                "group_scheme='default' for data_name in ['cords_2024', 'cords_permutate', 'cords_permutate5pct'] requires Cords cell types. "
                 "Use group_scheme='fine' or add a dataset-specific grouping in data_utilities.py."
             )
         group_ct_mapping["immune"] = set(['Bcell',
@@ -104,6 +172,134 @@ def get_group_ct_mapping(data_name, group_scheme, cell_type_mapping):
                                           'Lymphatic'])
 
         group_ct_mapping["Other"] = set(['Other'])
+
+    elif data_name == "cords_2024" and group_scheme == "group8":
+        required = set(get_cords_cell_type_mapping().keys())
+        if set(cell_type_mapping.keys()) != required:
+            raise ValueError(
+                "group_scheme='group8' for data_name='cords_2024' requires Cords cell types. "
+                "Use group_scheme='fine' or add a dataset-specific grouping in data_utilities.py."
+            )
+        group_ct_mapping["immune"] = set(['Bcell',
+                                        'CD4',
+                                        'CD4_Treg',
+                                        'CD8',
+                                        'IDO_CD4',
+                                        'IDO_CD8',
+                                        'ki67_CD4',
+                                        'ki67_CD8',
+                                        'Myeloid',
+                                        'Neutrophil',
+                                        'PD1_CD4',
+                                        'TCF1/7_CD4',
+                                        'TCF1/7_CD8'])
+
+        group_ct_mapping["tumor"] = set(['hypoxic',
+                                        'normal'])
+
+        group_ct_mapping["caf1"] = set(['mCAF',
+                                        'SMA_CAF'])
+        group_ct_mapping["caf2"] = set(['Collagen_CAF',
+                                        'PDPN_CAF',
+                                        'hypoxic_CAF',
+                                        'hypoxic_tpCAF'])
+        group_ct_mapping["caf3"] = set(['iCAF',
+                                        'IDO_CAF'])
+        group_ct_mapping["caf4"] = set(['dCAF',
+                                        'tpCAF',
+                                        'vCAF'])
+
+        group_ct_mapping["vessel"] = set(['Blood',
+                                        'HEV',
+                                        'Lymphatic'])
+
+        group_ct_mapping["Other"] = set(['Other'])
+
+    elif ((data_name in ["danenberg_2022"]) and (group_scheme == "default")):
+        required = set(get_Danenberg_cell_type_mapping().keys())
+        if set(cell_type_mapping.keys()) != required:
+            raise ValueError(
+                "group_scheme='default' for data_name in ['danenberg_2022'] requires Danenberg cell types. "
+                "Use group_scheme='fine' or add a dataset-specific grouping in data_utilities.py."
+            )
+
+        group_ct_mapping["immune"] = set(['T_{Reg} & T_{Ex}',
+                                            'CD4^{+} T cells & APCs',
+                                            'CD4^{+} T cells',
+                                            'CD8^{+} T cells',
+                                            'B cells',
+                                            'CD38^{+} lymphocytes',
+                                            'Granulocytes',
+                                            'Macrophages',
+                                            'Macrophages & granulocytes',
+                                            'Ki67^{+}',
+                                            'CD57^{+}'])
+
+        group_ct_mapping["tumor"] = set(['MHC I & II^{hi}',
+                                            'MHC I^{hi}CD57^{+}',
+                                            'MHC^{hi}CD15^{+}',
+                                            'HER2^{+}',
+                                            'CK8-18^{+} ER^{hi}',
+                                            'CK^{lo}ER^{med}',
+                                            'Basal',
+                                            'ER^{hi}CXCL12^{+}',
+                                            'CK8-18^{hi}CXCL12^{hi}',
+                                            'CD15^{+}',
+                                            'Ep CD57^{+}',
+                                            'CK^{+} CXCL12^{+}',
+                                            'Ep Ki67^{+}',
+                                            'CK^{med}ER^{lo}',
+                                            'CK^{lo}ER^{lo}',
+                                            'CK8-18^{hi}ER^{lo}'])
+
+        group_ct_mapping["stroma"] = set(['Fibroblasts',
+                                            'Fibroblasts FSP1^{+}',
+                                            'Myofibroblasts',
+                                            'Myofibroblasts PDPN^{+}'])
+
+        group_ct_mapping["endothelial"] = set(['Endothelial'])
+
+    elif ((data_name in ["mpfc_2022"]) and (group_scheme == "default")):
+        required = set(get_mpfc_cell_type_mapping().keys())
+        if set(cell_type_mapping.keys()) != required:
+            raise ValueError(
+                "group_scheme='default' for data_name in ['mpfc_2022'] requires mpfc cell types. "
+                "Use group_scheme='fine' or add a dataset-specific grouping in data_utilities.py."
+            )
+
+        all_celltypes = list(get_mpfc_cell_type_mapping().keys())
+
+        for ct in all_celltypes:
+            group_ct_mapping[ct] = set([ct])
+
+    elif ((data_name in ["lermi_2025"]) and (group_scheme == "default")):
+        required = set(get_lermi_cell_type_mapping().keys())
+        if set(cell_type_mapping.keys()) != required:
+            raise ValueError(
+                "group_scheme='default' for data_name in ['lermi_2025'] requires Lermi cell types. "
+                "Use group_scheme='fine' or add a dataset-specific grouping in data_utilities.py."
+            )
+        group_ct_mapping["immune"] = set(['CD4+ T cells',
+                                          'CD8+ T cells',
+                                          'B cells',
+                                          'Plasma cells',
+                                          'Alveolar macrophages',
+                                          'Interstitial macrophages',
+                                          'DC',
+                                          'Classical monocytes',
+                                          'Mast cells'])
+
+        group_ct_mapping["tumor"] = set(['Tumor cells'])
+
+        group_ct_mapping["Fibroblast"] = set(['Fibroblasts',
+                                              'Smooth muscle cells'])
+
+        group_ct_mapping["vessel"] = set(['Venous systemic EC',
+                                          'Lymphatic EC',
+                                          'Pericytes'])
+
+        group_ct_mapping["Other"] = set(['AT2',
+                                         'Other'])
 
     else:
         raise ValueError(
@@ -144,13 +340,130 @@ class data_features(object):
         elif graph_type=="local":
             self.processed_folder_name = "tg_graph_local"
 
-        if data_name == "cords_2024":
+        if data_name in ["cords_2024", "cords_permutate", "cords_permutate5pct"]:
 
-            self.data_dir = data_dir or "./data/Cords_data"
+            if data_name == "cords_2024":
+                self.data_dir = data_dir or "./data/Cords_data"
+            elif data_name == "cords_permutate":
+                self.data_dir = data_dir or "./data/Cords_data_permutate"
+            elif data_name == "cords_permutate5pct":
+                self.data_dir = data_dir or "./data/Cords_data_permutate5pct"
+
             self.raw_dir = os.path.join(self.data_dir, "raw_data")
             self.dataset_root = os.path.join(self.data_dir, "graph_objects", model_run_id)
 
             self.cell_type_mapping = get_cords_cell_type_mapping()
+            self.group_ct_mapping = get_group_ct_mapping(data_name, group_scheme, self.cell_type_mapping)
+
+            # load the list of region IDs
+            df_regions = pd.read_csv(os.path.join(self.data_dir, "region_list.csv"),
+                                     header=0)
+
+            self.train_images = df_regions["region_ID"].tolist()
+
+            # distance cutoff for getting edges in basic graph
+            self.dist_cutoff = dist_cutoff
+            self.expanded_edge_cutoff = expanded_edge_cutoff
+            self.top_k = top_k
+            self.ctg_comp_dist_cutoff = ctg_comp_dist_cutoff
+            self.degree_limit = degree_limit
+            # path purity cutoff for telling whether the shortest path between two cells is a qualified candidate edges to add
+            self.path_purity_cutoff = 0.90
+            # the cutoff for the max length of the shortest paths to consider as candidate
+            # current version does not use it to filter paths
+            # it should be set to a number larger than the max of number of cells in each image/tissue/region
+            # where the max is taken across all images/tissues/regions in the dataset
+            # self.path_len_cutoff = 30000
+            # a threshold for whether two clusters in an image are qualified to
+            # have the embedding distance and physical distance between them computed
+            # in order to be qualified, each of the two clusters must has at least this number of cells in the given image
+            self.n_cells_threshold = 30
+
+        elif data_name in ["danenberg_2022"]:
+
+            if data_name == "danenberg_2022":
+                self.data_dir = data_dir or "./data/Danenberg_data"
+
+            self.raw_dir = os.path.join(self.data_dir, "raw_data")
+            self.dataset_root = os.path.join(self.data_dir, "graph_objects", model_run_id)
+
+            self.cell_type_mapping = get_Danenberg_cell_type_mapping()
+            self.group_ct_mapping = get_group_ct_mapping(data_name, group_scheme, self.cell_type_mapping)
+
+            # load the list of region IDs
+            df_images = pd.read_csv(os.path.join(self.data_dir, "Metabric_images_geq_1000_cells.csv"),
+                                    header=0)
+
+            full_subtype = ["Positive", "Negative"]
+            df_images_subtype = df_images[df_images['er_sd'].isin(full_subtype)]
+
+            self.train_images = df_images_subtype["image_fullname"].tolist()
+
+            # distance cutoff for getting edges in basic graph
+            self.dist_cutoff = dist_cutoff
+            self.expanded_edge_cutoff = expanded_edge_cutoff
+            self.top_k = top_k
+            self.ctg_comp_dist_cutoff = ctg_comp_dist_cutoff
+            self.degree_limit = degree_limit
+            # path purity cutoff for telling whether the shortest path between two cells is a qualified candidate edges to add
+            self.path_purity_cutoff = 0.90
+            # the cutoff for the max length of the shortest paths to consider as candidate
+            # current version does not use it to filter paths
+            # it should be set to a number larger than the max of number of cells in each image/tissue/region
+            # where the max is taken across all images/tissues/regions in the dataset
+            # self.path_len_cutoff = 30000
+            # a threshold for whether two clusters in an image are qualified to
+            # have the embedding distance and physical distance between them computed
+            # in order to be qualified, each of the two clusters must has at least this number of cells in the given image
+            self.n_cells_threshold = 20
+
+        elif data_name in ["mpfc_2022"]:
+
+            if data_name == "mpfc_2022":
+                self.data_dir = data_dir or "./data/mpfc_data"
+
+            self.raw_dir = os.path.join(self.data_dir, "raw_data")
+            self.dataset_root = os.path.join(self.data_dir, "graph_objects", model_run_id)
+
+            self.cell_type_mapping = get_mpfc_cell_type_mapping()
+            self.group_ct_mapping = get_group_ct_mapping(data_name, group_scheme, self.cell_type_mapping)
+
+            # load the list of region IDs
+
+            df_images = pd.read_csv(os.path.join(self.data_dir, "image_info.csv"),
+                                    header=0)
+            full_subtype = ["all"]
+            df_images_subtype = df_images[df_images['subtype'].isin(full_subtype)]
+
+            self.train_images = df_images_subtype["image_fullname"].tolist()
+
+            # distance cutoff for getting edges in basic graph
+            self.dist_cutoff = dist_cutoff
+            self.expanded_edge_cutoff = expanded_edge_cutoff
+            self.top_k = top_k
+            self.ctg_comp_dist_cutoff = ctg_comp_dist_cutoff
+            self.degree_limit = degree_limit
+            # path purity cutoff for telling whether the shortest path between two cells is a qualified candidate edges to add
+            self.path_purity_cutoff = 0.90
+            # the cutoff for the max length of the shortest paths to consider as candidate
+            # current version does not use it to filter paths
+            # it should be set to a number larger than the max of number of cells in each image/tissue/region
+            # where the max is taken across all images/tissues/regions in the dataset
+            # self.path_len_cutoff = 30000
+            # a threshold for whether two clusters in an image are qualified to
+            # have the embedding distance and physical distance between them computed
+            # in order to be qualified, each of the two clusters must has at least this number of cells in the given image
+            self.n_cells_threshold = 10
+
+        elif data_name in ["lermi_2025"]:
+
+            if data_name == "lermi_2025":
+                self.data_dir = data_dir or "../../data/Lermi_data"
+
+            self.raw_dir = os.path.join(self.data_dir, "raw_data")
+            self.dataset_root = os.path.join(self.data_dir, "graph_objects", model_run_id)
+
+            self.cell_type_mapping = get_lermi_cell_type_mapping()
             self.group_ct_mapping = get_group_ct_mapping(data_name, group_scheme, self.cell_type_mapping)
 
             # load the list of region IDs

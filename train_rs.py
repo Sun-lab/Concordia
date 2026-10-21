@@ -79,19 +79,49 @@ parser.add_argument('--top_k', type=int, default=4, help='number of nearest cand
 parser.add_argument('--ctg_comp_dist_cutoff', type=float, default=0.176, help='cell type group composition distance cutoff for adding edges')
 parser.add_argument('--group_scheme', type=str, default="default", help='fine-to-coarse cell type grouping scheme')
 parser.add_argument('--model_run_id', type=str, default=None, help='dataset-aware identifier for this graph/model parameter set')
+parser.add_argument('--random_seed_index', type=int, default=1, help='which triple of random seeds to use, counting from 1: '
+'the seeds at positions [3*(index-1), 3*(index-1)+1, 3*(index-1)+2] of the random seed file are used for torch, random '
+'and numpy respectively. random_seeds_40_triples.txt holds 120 seeds, so this takes values 1-40')
+parser.add_argument('--random_seed_file', type=str, default="./data/random_seeds_40_triples.txt",
+                    help='text file with one random seed per line')
 
 
-def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2", skip_type="add", 
+def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2", skip_type="add",
                    device="gpu", s_dim2=40, batch_size=64,
                    lr=0.0001, epoch_limit=1000, degree_limit=20,
                    data_dir="./data/Cords_data", dist_cutoff=16,
                    expanded_edge_cutoff=48, top_k=4,
                    ctg_comp_dist_cutoff=0.176, group_scheme="default",
-                   model_run_id=None):
+                   model_run_id=None,
+                   random_seed_index=1,
+                   random_seed_file="./data/random_seeds_40_triples.txt"):
 
-    torch.manual_seed(1629)
-    random.seed(1000)
-    np.random.seed(1028)
+    # the random seeds are read from a file rather than hard-coded, so that the
+    # same code can be run repeatedly with a different, non-overlapping seed
+    # triple each time. random_seed_index counts from 1
+    with open(random_seed_file) as f:
+        all_random_seeds = [int(line) for line in f if line.strip() != ""]
+
+    seed_positions = [3 * (random_seed_index - 1),
+                      3 * (random_seed_index - 1) + 1,
+                      3 * (random_seed_index - 1) + 2]
+
+    if random_seed_index < 1 or seed_positions[2] >= len(all_random_seeds):
+        raise ValueError("random_seed_index " + str(random_seed_index) + " needs positions " +
+                         str(seed_positions) + ", but " + random_seed_file + " only has " +
+                         str(len(all_random_seeds)) + " seeds")
+
+    torch_seed, random_seed, numpy_seed = [all_random_seeds[p] for p in seed_positions]
+
+    print("random seed file:", random_seed_file)
+    print("random seed index:", random_seed_index, "-> positions", seed_positions)
+    print("torch.manual_seed(" + str(torch_seed) + "),",
+          "random.seed(" + str(random_seed) + "),",
+          "np.random.seed(" + str(numpy_seed) + ")")
+
+    torch.manual_seed(torch_seed)
+    random.seed(random_seed)
+    np.random.seed(numpy_seed)
 
     input_args = locals()
     print("input args are", input_args)
@@ -123,8 +153,13 @@ def mincutpool_run(data_name="cords_2024", graph_type="extended", gcn_type="gat2
 
     result_subfolder = data_dicts.result_subfolder
 
-    output_dir = "./results/"+result_subfolder+"/"+graph_type
-    model_dir = "./saved_models/"+result_subfolder+"/"+graph_type
+    # model_run_id itself is left unsuffixed, because it is what locates the
+    # graph objects to load. The seed index is appended only to the output
+    # paths, so that the repeated runs do not overwrite each other
+    result_subfolder_rs = result_subfolder+"__repeat_"+str(random_seed_index)
+
+    output_dir = "./results_rs/"+result_subfolder_rs+"/"+graph_type
+    model_dir = "./saved_models_rs/"+result_subfolder_rs+"/"+graph_type
 
     embedding_save_dir = output_dir+"/epoch_"+str(epoch_limit)
 

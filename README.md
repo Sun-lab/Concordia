@@ -74,3 +74,18 @@ Given the models and domains obtained from a model trained on a training dataset
 
 
 [transfer_direct_domains](https://github.com/Sun-lab/Concordia/blob/main/transfer_direct_domains)
+
+
+
+## Trained models, raw embeddings, scaling factors and domain annotations 
+
+These materials for the default Concordia trained on main non small-cell lung cancer dataset (Cords. et al. 2024) are available through this link on Google Drive:
+
+[Concordia_materials](https://drive.google.com/file/d/1XyqGVWV4iM5LeeN5H-AkTyt0XQEZ_iuD/view?usp=sharing)
+
+From each of the 10 trained GNN models, one embedding file was saved out for each image. The embedding file does not keep the cell ID, but it has row correspondence with the cells in the raw data file as in 
+```
+data/Cords_data/raw_data.tar.gz
+```
+which has the cell ID.
+

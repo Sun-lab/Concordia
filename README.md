@@ -89,3 +89,18 @@ data/Cords_data/raw_data.tar.gz
 ```
 which has the cell ID.
 
+The raw embeddings of all Concordia variants trained on the main non small-cell lung cancer dataset (Cords. et al. 2024) are available through this link on Google Drive:
+
+[raw_embeddings_Cords](https://drive.google.com/file/d/1P_gFGMSp0A2hw5zCRi0V0YBXmqjMSzHs/view?usp=sharing)
+
+Similarly, on the breast cancer dataset, the independent non small-cell lung cancer dataset, and the mouse brain data:
+
+[raw_embeddings_Danenberg](https://drive.google.com/file/d/1FF7cj4GhQ3cDaz83N8RZzQe7513cskZ6/view?usp=sharing)
+
+[raw_embeddings_Lermi](https://drive.google.com/file/d/1XWn56iRyUjAKvomyU4LqvCxE86IEgM2W/view?usp=sharing)
+
+[raw_embeddings_mpfc](https://drive.google.com/file/d/1hhl7x4ku-XUpaYmfkir7N8N-O3AWKs3F/view?usp=sharing)
+
+
+
+

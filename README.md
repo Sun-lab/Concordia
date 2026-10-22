@@ -1,5 +1,5 @@
-![Python 3.8.18](https://shields.io)
-![R 4.4.0](https://shields.io)
+![Python 3.8.18](https://img.shields.io/badge/Python-3.8.18-3776AB?logo=python&logoColor=white)
+![R 4.4.0](https://img.shields.io/badge/R-4.4.0-276DC3?logo=r&logoColor=white)
 
 # Concordia
 Spatial Domain Detection via Augmented Graphs for Population-Level Spatial Proteomics
